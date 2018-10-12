@@ -71,15 +71,15 @@ This is how the web worked for a while. It's called "HTTP basic authentication".
 
 ## HTTP Basic Auth
 
+---
+
+# ⌨️ (Demo) 🖱
+
 <Appear>
   <div>
     Go to <a href="https://jigsaw.w3.org/HTTP/Basic/">https://jigsaw.w3.org/HTTP/Basic/</a>
   </div>
 </Appear>
-
----
-
-# ⌨️ (Demo) 🖱
 
 ---
 
@@ -122,9 +122,15 @@ Mostly we don't use it because of the UX.
 <Appear>
   <li>It's an ugly browser modal which you can't style or control</li>
   <li>There's no way for a site to log a user out (the user has to clear their "cache")</li>
-  <li>Aside: Security</li>
+  <li>Aside: Security (option+O for notes)</li>
 </Appear>
 
+
+```notes
+Note: A lot of old answers will say "basic auth is insecure", but they're only kind of right. You're protected primarily by HTTPS. At some point, you "need to"[*](https://en.wikipedia.org/wiki/Challenge%E2%80%93response_authentication) send the password in cleartext, one way or another, so the server can see if you're right or not.
+
+* A small security issue is the fact that your password keeps getting transmitted, which means it needs to be stored, which means someone could potentially retrieve it. But, the same thing is true for a session token, so it's not really that much different. However, the session is slightly safer because it is fairly temporary, while a password might have a much longer life.
+```
 
 ---
 ## Sessions vs passwords
