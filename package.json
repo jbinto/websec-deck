@@ -1,0 +1,17 @@
+{
+  "name": "websec-deck",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "mdx-deck deck.mdx"
+  },
+  "devDependencies": {
+    "mdx-deck": "^1.7.7",
+    "mdx-deck-code-surfer": "^0.5.1",
+    "raw-loader": "^0.5.1"
+  },
+  "dependencies": {
+    "react": "^16.5.2"
+  }
+}

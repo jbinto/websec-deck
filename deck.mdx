@@ -1,0 +1,264 @@
+import { Appear, Code } from 'mdx-deck'
+import { CodeSurfer } from "mdx-deck-code-surfer"
+
+
+# websec talk, oct 11
+---
+
+# How do sessions work?
+
+How does a site remember who I am?
+
+---
+
+
+It's important to understand HTTP is stateless.
+
+You ask for something, the server gives it to you... and forgets who you are.
+
+---
+
+obligatory:
+
+<a href="https://xkcd.com/869/" target="_blank">
+  <img src="https://imgs.xkcd.com/comics/server_attention_span.png" />
+</a>
+
+---
+
+So let's think about some really basic things and then show how they don't really work.
+
+---
+
+## No sessions at all, just security via obscurity
+
+Some sites will avoid the fact they don't have "sessions" by making things pseduo-public. e.g.
+
+---
+
+```
+http://news.example.org/paid-articles/39211/
+```
+
+<Appear>
+👆 "This link is secret, nobody will ever share it!""
+</Appear>
+
+---
+
+```
+http://hardwarestore.example.org/invoices/101/
+```
+
+<Appear>
+👆 "Nobody will ever think to change the /101/"
+</Appear>
+
+
+---
+
+This is no good. We need something to prove who we are. We need some sort of secret. How about a password.
+
+---
+
+## Send the username and password on every request
+
+<Appear>
+This is how the web worked for a while. It's called "HTTP basic authentication".
+</Appear>
+
+---
+
+## HTTP Basic Auth
+
+<Appear>
+  <div>
+    Go to <a href="https://jigsaw.w3.org/HTTP/Basic/">https://jigsaw.w3.org/HTTP/Basic/</a>
+  </div>
+</Appear>
+
+---
+
+# ⌨️ (Demo) 🖱
+
+---
+
+Your browser sends `GET /HTTP/Basic` and gets back something like:
+
+```
+HTTP/1.1 401 Unauthorized
+www-authenticate: Basic realm="test"
+```
+
+Because of the `www-authenticate` header, the browser prompts you for a username and password.
+
+---
+
+When you enter a password, the browser sends something like:
+
+```
+GET /HTTP/Basic
+authorization: Basic YWJiYTp6YWJiYQ==
+```
+
+Then, each subsequent request keeps sending this header.
+
+---
+
+# ⏰ Segue: base64, `atob`
+
+(option+O for notes)
+
+```notes
+https://developer.mozilla.org/en-US/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
+```
+
+---
+
+## Why don't we just HTTP Basic?
+
+Mostly we don't use it because of the UX.
+
+<Appear>
+  <li>It's an ugly browser modal which you can't style or control</li>
+  <li>There's no way for a site to log a user out (the user has to clear their "cache")</li>
+  <li>Aside: Security</li>
+</Appear>
+
+
+---
+## Sessions vs passwords
+
+HTTP Basic Authentication is not a _session_. It's just password protection.
+
+A session lets us store things on the server, and come back a few minutes later, and they're still there.
+
+*Sessions are trying to work around the fact HTTP is stateless.*
+
+---
+
+# ⏰ Segue: Sessions for server apps
+
+(option+O for notes)
+
+```notes
+* In 2008, this was really important: all our apps were "server rendered". We stored lots and lots of stuff in session, because all the browser did was render HTML. Any cached database results, what language the user picked, which page of a 4 page form the user is on: in the past all of that was in the session state, stored on the backend server.
+
+* In 2018, we manage most of this stuff in frontend code, stored in the user's browser: React (or Redux) state, browser localStorage, something like that. Sessions are less important. **Nowadays, sessions are really only about "I am currently logged in as this user".** It's not a security risk if the frontend decides "We're using French" or "We're on page 5" or "Show these old results instead". But some things, the backend needs to decide. "My user ID 6" is not something we can trust the frontend with.
+
+* Aside: Some would say with JWT, we don't need sessions at all - this is an increasingly accepted viewpoint (I haven't quite come around to this yet, and it's too much to get into for this session🥊).
+```
+
+---
+
+## How our frontend works
+
+Open the Chrome devtools to the network tab, and log into the frontend.
+
+Take a look at the `POST /auth/local`
+
+---
+
+```
+POST /auth/local HTTP/1.1
+Host: platform.touchbistro.com
+Content-Type: application/x-www-form-urlencoded; charset=utf-8
+Content-Length: 59
+[...most headers trimmed...]
+
+username=jbuchanan%40touchbistro.com&password=lol
+```
+
+---
+
+The server sends you back a response:
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Set-Cookie: session=eyJwYXNzcG9...SNIP...OE8ydzQifQ==; path=/; httponly
+Set-Cookie: session.sig=aXP1HZ8N5xFlCvEsAnlDDGTdPoY; path=/; httponly
+[...most headers trimmed...]
+```
+
+---
+
+# ⏰ Segue: Cookies
+
+(option+O for notes)
+
+```notes
+* Segue: Cookies
+  * HTTP is stateless.
+  * Cookies are site specific key value store. (Show dev tools)
+  * Cookies can be set two ways
+    * By frontend JavaScript code, using `document.setCookie()`,
+    * and by the backend HTTP server sending a `Set-Cookie` header
+  * The browser sends the cookie back to the server on every subsequent request, just like the HTTP basic auth example.
+```
+
+---
+
+Remember the `Set-Cookie` from 2 slides ago? Let's decode it..
+
+---
+
+```
+atob(
+  // The + is just to fit it on the slide.
+  'eyJwYXNzcG9ydCI6eyJ1c2VyIjp'
+  +'7InVzZXJJRCI6IjIifX0sImNzcm'
+  +'ZTZWNyZXQiOiJISWR3OHprM2t4X'
+  +'3M3VDVuQVJEOE8ydzQifQ=='
+)
+```
+
+<Appear>What do we get back?</Appear>
+
+---
+
+```
+"{"passport":{"user":{"userID":"2"}},"csrfSecret":"HIdw8zk3kx_s7T5nARD8O2w4"}"
+```
+
+<Appear>
+  <p>Just ignore `csrfSecret` for now. Look at the `passport` structure.</p>
+  <p>It's exactly the same as our naive solution above! We're letting the browser say which user we are? How does this even work?</p>
+</Appear>
+
+---
+
+# ⏰ Segue: session.sig
+
+---
+
+# ⏰ Segue: Different types of session
+
+---
+
+# CSRF
+
+## 🚧 In progress
+(option+O for notes)
+
+```notes
+* Stop drive-by attacks, harmful clickbait links
+* Show "insecure GET" anti-pattern
+  * Realize cookies are sent on every request!!
+  * Via link
+  * Via img src (!!)
+
+* Show how putting CSRF token in an old-school `<form>` provides protection
+* advanced🙀: How to *securely* get CSRF in a single-page-app (e.g. fetch requests)
+```
+---
+
+# CORS
+
+## 🚧 In progress
+
+---
+
+# XSS
+
+## 🚧 In progress
